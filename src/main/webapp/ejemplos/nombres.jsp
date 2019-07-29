@@ -3,18 +3,7 @@
 <%@ include file="../includes/header.jsp" %>
 <%@ include file="../includes/navbar.jsp" %>
 <h1>Listado Nombres</h1>
-	
-	<div class="row">	
-	<% if ( request.getAttribute("mensaje") != null ){ %>
-	 	<div class="alert alert-${mensaje.tipo} alert-dismissible fade show" role="alert">
-		  <p>${mensaje.texto}</p>
-		  <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-		    <span aria-hidden="true">&times;</span>
-		  </button>
-		</div>
-		<%} %>
-	</div>	
-	
+
 	<div class="row">	
 		<div class="col-8">		
 			

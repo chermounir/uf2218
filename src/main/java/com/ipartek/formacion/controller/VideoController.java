@@ -1,12 +1,19 @@
 package com.ipartek.formacion.controller;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Set;
 
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import javax.validation.ConstraintViolation;
+import javax.validation.Validation;
+import javax.validation.Validator;
 
 import com.ipartek.formacion.model.dao.VideoDAO;
 import com.ipartek.formacion.model.pojo.Video;
@@ -16,7 +23,7 @@ import com.mysql.jdbc.exceptions.MySQLIntegrityConstraintViolationException;
 /**
  * Servlet implementation class VideoController
  */
-@WebServlet("/videos")
+@WebServlet("/backoffice/videos")
 public class VideoController extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
@@ -31,6 +38,14 @@ public class VideoController extends HttpServlet {
 	public static final String OP_GUARDAR = "7";
 
 	private static VideoDAO videoDAO;
+	private Validator validator;
+
+	@Override
+	public void init(ServletConfig config) throws ServletException {
+		super.init(config);
+		videoDAO = VideoDAO.getInstance();
+		validator = Validation.buildDefaultValidatorFactory().getValidator();
+	}
 
 	/**
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse
@@ -89,7 +104,6 @@ public class VideoController extends HttpServlet {
 	}
 
 	private void listar(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		VideoDAO videoDAO = VideoDAO.getInstance();
 		request.setAttribute("videos", videoDAO.getAll());
 		request.getRequestDispatcher(VIEW_INDEX).forward(request, response);
 
@@ -105,9 +119,18 @@ public class VideoController extends HttpServlet {
 	private void detalle(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		int id = Integer.parseInt(request.getParameter("id"));
-		VideoDAO videoDAODetalle = VideoDAO.getInstance();
-		request.setAttribute("video", videoDAODetalle.getById(id));
+		Video v = videoDAO.getById(id);
+		request.setAttribute("video", v);
 		view = VIEW_FORM;
+
+		HttpSession session = request.getSession();
+		HashMap<Integer, Video> videosVistos = (HashMap<Integer, Video>) session.getAttribute("videosVistos");
+		if (videosVistos == null) {
+			videosVistos = new HashMap<Integer, Video>();
+		}
+		videosVistos.put(v.getId(), v);
+		session.setAttribute("videosVistos", videosVistos);
+
 		request.getRequestDispatcher(view).forward(request, response);
 
 	}
@@ -117,8 +140,7 @@ public class VideoController extends HttpServlet {
 		Alert mensaje = new Alert("warning", "no se ha podido eliminar el registro");
 		int id = Integer.parseInt(request.getParameter("id"));
 
-		VideoDAO videoDAOEliminar = VideoDAO.getInstance();
-		if (videoDAOEliminar.delete(id)) {
+		if (videoDAO.delete(id)) {
 			mensaje = new Alert("success", "registro eliminado con exito");
 		}
 		view = VIEW_FORM;
@@ -141,23 +163,32 @@ public class VideoController extends HttpServlet {
 		video.setCodigo(codigo);
 		video.setCodigo(codigo);
 
-		VideoDAO videoDAOModificar = VideoDAO.getInstance();
-		if (id == -1) {
-			if (videoDAOModificar.crear(video)) {
-				mensaje = new Alert("success", "registro insertado con exito");
-			}else {
-				mensaje = new Alert("warning", "no se ha podido insertar el registro");
-			}
+		Set<ConstraintViolation<Video>> violationes = validator.validate(video);
+		if (violationes.isEmpty()) {
 
+			if (id == -1) {
+				if (videoDAO.crear(video)) {
+					mensaje = new Alert("success", "registro insertado con exito");
+				} else {
+					mensaje = new Alert("warning", "no se ha podido insertar el registro");
+				}
+
+			} else {
+				if (videoDAO.modificar(video)) {
+					mensaje = new Alert("success", "registro modificado con exito");
+				} else {
+					mensaje = new Alert("warning", "no se ha podido modificar el registro");
+				}
+
+			}
 		} else {
-			if (videoDAOModificar.modificar(video)) {
-				mensaje = new Alert("success", "registro modificado con exito");
-			}else {
-				mensaje = new Alert("warning", "no se ha podido modificar el registro");
+			String menssage = "";
+			for (ConstraintViolation<Video> violation : violationes) {
+
+				menssage += violation.getPropertyPath() + ": " + violation.getMessage() + "<br>";
 			}
-
+			mensaje = new Alert("danger", menssage);
 		}
-
 		view = VIEW_FORM;
 		request.setAttribute("mensaje", mensaje);
 		request.setAttribute("video", video);
