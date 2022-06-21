@@ -46,7 +46,7 @@
 		<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
-			<version>5.1.6</version>
+			<version>8.0.28</version>
 			<!--si no existe el escope, al crear el proyecto se incluye la libreria -->
 		</dependency>
 
